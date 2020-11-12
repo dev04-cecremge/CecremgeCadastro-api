@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\TrilhaDeAuditoria;
 
@@ -27,7 +28,7 @@ class SessionController extends Controller
             if ($connection->auth()->attempt($userAd->getDn(), $request->senha)) {
                 $session = TrilhaDeAuditoria::create([
                     'contaDominio' => $request->contaDominio,
-                    'codigoCooperativa' => mb_substr($request->contaDominio, -7, 4),
+                    'codigoCooperativa' => $request->codigoCooperativa,
                     'tokenGeradoEm' => Carbon::now()->toDateTimeString(),
                     'tokenExpiradoEm' => Carbon::now()->addHour()->toDateTimeString(),
                 ]);
@@ -40,6 +41,8 @@ class SessionController extends Controller
                 } else {
                     return response()->json([
                         'success' => true,
+                        'contaDominio' => $session->contaDominio,
+                        'codigoCooperativa' => $session->codigoCooperativa,
                         'token' => $token,
                     ]);
                 }
