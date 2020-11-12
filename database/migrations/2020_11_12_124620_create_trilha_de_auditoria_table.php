@@ -6,26 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateTrilhaDeAuditoriaTable extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('trilha_de_auditoria', function (Blueprint $table) {
+        Schema::create('TrilhaDeAuditoria_API', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->string('contaDominio');
+            $table->integer('codigoCooperativa');
+            $table->datetime('tokenGeradoEm');
+            $table->datetime('tokenExpiradoEm');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('trilha_de_auditoria');
+        Schema::dropIfExists('TrilhaDeAuditoria_API');
     }
 }
