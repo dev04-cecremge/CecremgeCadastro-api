@@ -7,6 +7,10 @@ Route::group(['prefix' => 'sessions'], function () {
     Route::post('/', 'SessionController@store');
 });
 
+Route::group(['prefix' => 'jedi'], function () {
+    Route::post('/primeiro', 'JEDIController@primeiro');
+});
+
 Route::group(['prefix' => 'central', 'namespace' => 'Central'], function () {
     Route::group(['prefix' => 'departamentos'], function () {
         Route::get('/', 'DepartamentoController@index');
@@ -19,5 +23,7 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central'], function () {
         Route::get('/gerentes', 'PessoaFisicaController@gerentes');
         Route::get('/supervisores', 'PessoaFisicaController@supervisores');
         Route::get('/{cpf}/departamento', 'PessoaFisicaController@departamentoDaPessoaFisica');
+
+        Route::put('/{cpf}/departamento', 'PessoaFisicaController@atualizarDepartamento');
     });
 });

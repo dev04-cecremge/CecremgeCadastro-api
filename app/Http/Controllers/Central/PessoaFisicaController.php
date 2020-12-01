@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
 
+use Carbon\Carbon;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -146,6 +148,31 @@ class PessoaFisicaController extends Controller
                 'codigo' => intval($pessoaFisica->CodigoDepartamento),
                 'nome' => $pessoaFisica->NomeDepartamento,
             ],
+        ]);
+    }
+
+    public function atualizarDepartamento(Request $request, $cpf)
+    {
+        $pessoaFisica = DB::table('PessoasFisicas')
+            ->where('CPF', $cpf)
+            ->first();
+
+        if (!$pessoaFisica)
+            return response()->json([
+                'mensagem' => 'Pessoa física não encontrada'
+            ], 401);
+
+        DB::table('MembrosPessoasJuridicas')
+            ->where('CodigoPessoaFisica', $pessoaFisica->Codigo)
+            ->where('CodigoPessoaJuridica', 1)
+            ->update([
+                'CodigoDepartamento' => $request->codigoDepartamento,
+                'DataAlteracao' => Carbon::now()->toDateTimeString(),
+                'Editor' => 'mateusl2003_00',
+            ]);
+
+        return response()->json([
+            'mensagem' => 'Departamento atualizado'
         ]);
     }
 }
