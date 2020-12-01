@@ -30,44 +30,6 @@ class DepartamentoController extends Controller
         return response()->json($response);
     }
 
-    public function gerentes()
-    {
-        $gerentes = DB::table('MembrosPessoasJuridicas')
-            ->join('PessoasFisicas', 'PessoasFisicas.Codigo', '=', 'MembrosPessoasJuridicas.CodigoPessoaFisica')
-            ->join('Departamentos', 'Departamentos.Codigo', '=', 'MembrosPessoasJuridicas.CodigoDepartamento')
-            ->join('Cargos', 'Cargos.Codigo', '=', 'MembrosPessoasJuridicas.CodigoCargo')
-            ->where('MembrosPessoasJuridicas.CodigoTipoPessoaFisica', '!=', 4)
-            ->where('MembrosPessoasJuridicas.CodigoPessoaJuridica', 1)
-            ->where('Cargos.Nome', 'like', 'Gerente%')
-            ->orderBy('Departamentos.Nome')
-            ->select([
-                'Cargos.Nome AS Cargo',
-                'PessoasFisicas.CPF',
-                'PessoasFisicas.Nome',
-                'PessoasFisicas.ContaDominio',
-                'PessoasFisicas.Codigo AS CodigoPessoaFisica',
-                'Departamentos.Nome AS NomeDepartamento',
-                'MembrosPessoasJuridicas.CodigoDepartamento',
-            ])
-            ->get();
-
-        $response = [];
-        foreach ($gerentes as $gerente)
-            array_push($response, [
-                'codigoPessoaFisica' => intval($gerente->CodigoPessoaFisica),
-                'cpf' => $gerente->CPF,
-                'contaDominio' => $gerente->ContaDominio,
-                'nome' => $gerente->Nome,
-                'cargo' => $gerente->Cargo,
-                'departamento' => [
-                    'codigo' => intval($gerente->CodigoDepartamento),
-                    'nome' => $gerente->NomeDepartamento,
-                ],
-            ]);
-
-        return response()->json($response);
-    }
-
     public function gerenteDoDepartamento($codigoDepartamento)
     {
         $gerente = DB::table('MembrosPessoasJuridicas')

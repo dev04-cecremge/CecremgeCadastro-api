@@ -46,38 +46,42 @@ class PessoaFisicaController extends Controller
         return response()->json($response);
     }
 
-    public function show($cpf)
+    public function gerentes()
     {
-        $pessoaFisica = DB::table('Departamentos')
-            ->join('MembrosPessoasJuridicas', 'MembrosPessoasJuridicas.CodigoDepartamento', '=', 'Departamentos.Codigo')
+        $gerentes = DB::table('MembrosPessoasJuridicas')
             ->join('PessoasFisicas', 'PessoasFisicas.Codigo', '=', 'MembrosPessoasJuridicas.CodigoPessoaFisica')
+            ->join('Departamentos', 'Departamentos.Codigo', '=', 'MembrosPessoasJuridicas.CodigoDepartamento')
             ->join('Cargos', 'Cargos.Codigo', '=', 'MembrosPessoasJuridicas.CodigoCargo')
             ->where('MembrosPessoasJuridicas.CodigoTipoPessoaFisica', '!=', 4)
             ->where('MembrosPessoasJuridicas.CodigoPessoaJuridica', 1)
-            ->where('PessoasFisicas.CPF', $cpf)
-            ->orderBy('PessoasFisicas.Nome')
+            ->where('Cargos.Nome', 'like', 'Gerente%')
+            ->orderBy('Departamentos.Nome')
             ->select([
-                'PessoasFisicas.Codigo AS CodigoPessoaFisica',
-                'PessoasFisicas.ContaDominio',
+                'Cargos.Nome AS Cargo',
                 'PessoasFisicas.CPF',
                 'PessoasFisicas.Nome',
-                'Cargos.Nome AS NomeCargo',
+                'PessoasFisicas.ContaDominio',
+                'PessoasFisicas.Codigo AS CodigoPessoaFisica',
                 'Departamentos.Nome AS NomeDepartamento',
-                'Departamentos.Codigo AS CodigoDepartamento',
+                'MembrosPessoasJuridicas.CodigoDepartamento',
             ])
-            ->first();
+            ->get();
 
-        return response()->json([
-            'codigoPessoaFisica' => intval($pessoaFisica->CodigoPessoaFisicaFisica),
-            'cpf' => $pessoaFisica->CPF,
-            'nome' => $pessoaFisica->Nome,
-            'contaDominio' => $pessoaFisica->ContaDominio,
-            'cargo' => $pessoaFisica->NomeCargo,
-            'departamento' => [
-                'codigo' => intval($pessoaFisica->CodigoDepartamento),
-                'nome' => $pessoaFisica->NomeDepartamento,
-            ],
-        ]);
+        $response = [];
+        foreach ($gerentes as $gerente)
+            array_push($response, [
+                'codigoPessoaFisica' => intval($gerente->CodigoPessoaFisica),
+                'cpf' => $gerente->CPF,
+                'contaDominio' => $gerente->ContaDominio,
+                'nome' => $gerente->Nome,
+                'cargo' => $gerente->Cargo,
+                'departamento' => [
+                    'codigo' => intval($gerente->CodigoDepartamento),
+                    'nome' => $gerente->NomeDepartamento,
+                ],
+            ]);
+
+        return response()->json($response);
     }
 
     public function supervisores()
@@ -130,7 +134,7 @@ class PessoaFisicaController extends Controller
 
         if (!$pessoaFisica)
             return response()->json([
-                'mensagem' => 'Não existe departamento para a pessoa física ' . $pessoaFisica->Nome
+                'mensagem' => 'Não existe departamento para a pessoa física'
             ], 401);
 
         return response()->json([
