@@ -11,7 +11,6 @@ class CreateTrilhaDeAuditoriaTable extends Migration
         Schema::create('TrilhaDeAuditoria_API', function (Blueprint $table) {
             $table->id();
             $table->string('contaDominio');
-            $table->integer('codigoCooperativa');
             $table->datetime('tokenGeradoEm');
             $table->datetime('tokenExpiradoEm');
         });

@@ -12,7 +12,6 @@ class TrilhaDeAuditoria extends Authenticatable implements JWTSubject
     protected $table = 'TrilhaDeAuditoria_API';
     protected $fillable = [
         'contaDominio',
-        'codigoCooperativa',
         'tokenGeradoEm',
         'tokenExpiradoEm',
     ];

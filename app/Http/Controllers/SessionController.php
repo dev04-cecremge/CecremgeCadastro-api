@@ -28,35 +28,29 @@ class SessionController extends Controller
             if ($connection->auth()->attempt($userAd->getDn(), $request->senha)) {
                 $session = TrilhaDeAuditoria::create([
                     'contaDominio' => $request->contaDominio,
-                    'codigoCooperativa' => $request->codigoCooperativa,
                     'tokenGeradoEm' => Carbon::now()->toDateTimeString(),
                     'tokenExpiradoEm' => Carbon::now()->addHour()->toDateTimeString(),
                 ]);
 
                 if (!$token = auth()->tokenById($session->id)) {
                     return response()->json([
-                        'success' => false,
-                        'message' => 'Não foi possível gerar um token'
-                    ]);
+                        'mensagem' => 'Não foi possível gerar um token'
+                    ], 401);
                 } else {
                     return response()->json([
-                        'success' => true,
                         'contaDominio' => $session->contaDominio,
-                        'codigoCooperativa' => $session->codigoCooperativa,
                         'token' => $token,
                     ]);
                 }
             } else {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Senha inválida'
-                ]);
+                    'mensagem' => 'Senha inválida'
+                ], 401);
             }
         } catch (\LdapRecord\Models\ModelNotFoundException $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'Usuário inválido'
-            ]);
+                'mensagem' => 'Usuário inválido'
+            ], 401);
         }
     }
 }
