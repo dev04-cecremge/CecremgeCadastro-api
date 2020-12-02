@@ -27,6 +27,14 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
         Route::get('/{codigoDepartamento}/funcionarios', 'DepartamentoController@funcionariosDoDepartamento');
     });
 
+    Route::group(['prefix' => 'pessoas-juridicas'], function () {
+        Route::get('/', 'PessoaJuridicaController@index');
+        Route::get('/{codigoPessoaJuridica}', 'PessoaJuridicaController@show');
+        Route::post('/', 'PessoaJuridicaController@store');
+        Route::put('/{codigoPessoaJuridica}', 'PessoaJuridicaController@update');
+        Route::delete('/{codigoPessoaJuridica}', 'PessoaJuridicaController@destroy');
+    });
+
     Route::group(['prefix' => 'pessoas-fisicas'], function () {
         Route::get('/', 'PessoaFisicaController@index');
         Route::get('/{codigoPessoaFisica}', 'PessoaFisicaController@show');
