@@ -40,5 +40,21 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
         Route::put('/{cpf}/departamento', 'PessoaFisicaController@atualizarDepartamento');
     });
 
+    Route::group(['prefix' => 'sistemas-cecremge'], function () {
+        Route::get('/', 'SistemaCecremgeController@index');
+        Route::get('/{codigoSistema}', 'SistemaCecremgeController@show');
+        Route::post('/', 'SistemaCecremgeController@store');
+        Route::put('/{codigoSistema}', 'SistemaCecremgeController@update');
+        Route::delete('/{codigoSistema}', 'SistemaCecremgeController@destroy');
+    });
+
+    Route::group(['prefix' => 'cooperativas'], function () {
+        Route::get('/', 'CooperativaController@index');
+        Route::get('/{codigoCooperativa}', 'CooperativaController@show');
+        Route::post('/', 'CooperativaController@store');
+        Route::put('/{codigoCooperativa}', 'CooperativaController@update');
+        Route::delete('/{codigoCooperativa}', 'CooperativaController@destroy');
+    });
+
     //
 });
