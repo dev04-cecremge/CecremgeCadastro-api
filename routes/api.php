@@ -40,6 +40,14 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
         Route::put('/{cpf}/departamento', 'PessoaFisicaController@atualizarDepartamento');
     });
 
+    Route::group(['prefix' => 'dependentes'], function () {
+        Route::get('/', 'DependenteController@index');
+        Route::get('/{codigoDependente}', 'DependenteController@show');
+        Route::post('/', 'DependenteController@store');
+        Route::put('/{codigoDependente}', 'DependenteController@update');
+        Route::delete('/{codigoDependente}', 'DependenteController@destroy');
+    });
+
     Route::group(['prefix' => 'sistemas-cecremge'], function () {
         Route::get('/', 'SistemaCecremgeController@index');
         Route::get('/{codigoSistema}', 'SistemaCecremgeController@show');
