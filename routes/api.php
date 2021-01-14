@@ -9,8 +9,8 @@ Route::group(['prefix' => 'sessions'], function () {
     Route::post('/destroy', 'SessionController@destroy')->middleware('jwt.auth');
 });
 
-Route::group(['prefix' => 'jedi', 'middleware' => 'jwt.auth'], function () {
-    Route::post('/atualizarAssociadosCooperativa', 'JEDIController@atualizarAssociadosCooperativa');
+Route::group(['prefix' => 'jedi'], function () {
+    Route::post('/cooperativas/atualizar-funcionarios', 'JEDIController@atualizarFuncionariosCooperativa');
 });
 
 Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => 'jwt.auth'], function () {
@@ -38,6 +38,9 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
         Route::get('/supervisores', 'PessoaFisicaController@supervisores');
         Route::get('/{cpf}/departamento', 'PessoaFisicaController@departamentoDaPessoaFisica');
         Route::put('/{cpf}/departamento', 'PessoaFisicaController@atualizarDepartamento');
+        Route::get('/{contaDominio}/departamentoContaDominio', 'PessoaFisicaController@departamentoDaPessoaFisicaContaDominio');
+        
+        Route::put('/{cpf}/contaDeDominio', 'PessoaFisicaController@atualizarContaDeDominio');
     });
 
     Route::group(['prefix' => 'sistemas-cecremge'], function () {

@@ -151,6 +151,41 @@ class PessoaFisicaController extends Controller
         ]);
     }
 
+    public function departamentoDaPessoaFisicaContaDominio($contadominio)
+    {
+        $pessoaFisica = DB::table('Departamentos')
+            ->join('MembrosPessoasJuridicas', 'MembrosPessoasJuridicas.CodigoDepartamento', '=', 'Departamentos.Codigo')
+            ->join('PessoasFisicas', 'PessoasFisicas.Codigo', '=', 'MembrosPessoasJuridicas.CodigoPessoaFisica')
+            ->where('PessoasFisicas.ContaDominio', $contadominio)
+            ->where('MembrosPessoasJuridicas.CodigoPessoaJuridica', 1)
+            ->where('MembrosPessoasJuridicas.CodigoTipoPessoaFisica', '!=', 4)
+            ->select([
+                'PessoasFisicas.Codigo AS CodigoPessoaFisica',
+                'PessoasFisicas.Nome',
+                'PessoasFisicas.CPF',
+                'PessoasFisicas.ContaDominio',
+                'Departamentos.Codigo AS CodigoDepartamento',
+                'Departamentos.Nome AS NomeDepartamento',
+            ])
+            ->first();
+
+        if (!$pessoaFisica)
+            return response()->json([
+                'mensagem' => 'Não existe departamento para a pessoa física'
+            ], 401);
+
+        return response()->json([
+            'codigoPessoaFisica' => intval($pessoaFisica->CodigoPessoaFisica),
+            'cpf' => $pessoaFisica->CPF,
+            'contaDominio' => $pessoaFisica->ContaDominio,
+            'nome' => $pessoaFisica->Nome,
+            'departamento' => [
+                'codigo' => intval($pessoaFisica->CodigoDepartamento),
+                'nome' => $pessoaFisica->NomeDepartamento,
+            ],
+        ]);
+    }
+
     public function atualizarDepartamento(Request $request, $cpf)
     {
         $pessoaFisica = DB::table('PessoasFisicas')
@@ -175,4 +210,38 @@ class PessoaFisicaController extends Controller
             'mensagem' => 'Departamento atualizado'
         ]);
     }
+
+    public function atualizarContaDeDominio(Request $request, $cpf){
+       $pessoa = DB::table('PessoasFisicas')
+            ->where('CPF', $cpf)
+            ->first();
+
+        if (!$request->contaDeDominio){
+            return response()->json([
+                'Erro' => 'conta de dominio nao informada2'
+            ], 401);
+        }
+        
+
+        if (!$pessoa){
+            return response()->json([
+                'Erro' => 'Não existe pessoa cadastrada com esse CPF!'
+            ], 401);
+        }
+
+        //Atualiza o cadastro
+        DB::table('PessoasFisicas')
+            ->where('CPF', $pessoa->CPF)
+            ->update([
+                'ContaDominio' => $request->contaDeDominio,
+                'DataAlteracao' => Carbon::now()->toDateTimeString(),
+                'Editor' => 'CadastroAPI'
+            ]);
+
+            return response()->json([
+                'mensagem' => 'Conta de domínio atualizada!'
+            ]);
+
+    }
+
 }
