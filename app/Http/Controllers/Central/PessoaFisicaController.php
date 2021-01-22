@@ -82,7 +82,7 @@ class PessoaFisicaController extends Controller
                     'nome' => $gerente->NomeDepartamento,
                 ],
             ]);
-
+        
         return response()->json($response);
     }
 
@@ -212,7 +212,7 @@ class PessoaFisicaController extends Controller
     }
 
     public function atualizarContaDeDominio(Request $request, $cpf){
-       $pessoa = DB::table('PessoasFisicas')
+        $pessoa = DB::table('PessoasFisicas')
             ->where('CPF', $cpf)
             ->first();
 
@@ -243,5 +243,6 @@ class PessoaFisicaController extends Controller
             ]);
 
     }
+
 
 }

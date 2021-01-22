@@ -18,8 +18,10 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
 
     Route::group(['prefix' => 'departamentos'], function () {
         Route::get('/', 'DepartamentoController@index');
-        Route::get('/{codigoDepartamento}', 'DepartamentoController@show');
         Route::post('/', 'DepartamentoController@store');
+
+        Route::get('/{codigoDepartamento}', 'DepartamentoController@show');
+
         Route::put('/{codigoDepartamento}', 'DepartamentoController@update');
         Route::delete('/{codigoDepartamento}', 'DepartamentoController@destroy');
 
@@ -28,14 +30,16 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
     });
 
     Route::group(['prefix' => 'pessoas-fisicas'], function () {
-        Route::get('/', 'PessoaFisicaController@index');
+
+        Route::get('/gerentes', 'PessoaFisicaController@gerentes');
+        Route::get('/supervisores', 'PessoaFisicaController@supervisores');
         Route::get('/{codigoPessoaFisica}', 'PessoaFisicaController@show');
+
+        Route::get('/', 'PessoaFisicaController@index');
         Route::post('/', 'PessoaFisicaController@store');
         Route::put('/{codigoPessoaFisica}', 'PessoaFisicaController@update');
         Route::delete('/{codigoPessoaFisica}', 'PessoaFisicaController@destroy');
 
-        Route::get('/gerentes', 'PessoaFisicaController@gerentes');
-        Route::get('/supervisores', 'PessoaFisicaController@supervisores');
         Route::get('/{cpf}/departamento', 'PessoaFisicaController@departamentoDaPessoaFisica');
         Route::put('/{cpf}/departamento', 'PessoaFisicaController@atualizarDepartamento');
         Route::get('/{contaDominio}/departamentoContaDominio', 'PessoaFisicaController@departamentoDaPessoaFisicaContaDominio');
@@ -44,11 +48,14 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
     });
 
     Route::group(['prefix' => 'sistemas-cecremge'], function () {
-        Route::get('/', 'SistemaCecremgeController@index');
-        Route::get('/{codigoSistema}', 'SistemaCecremgeController@show');
-        Route::post('/', 'SistemaCecremgeController@store');
         Route::put('/{codigoSistema}', 'SistemaCecremgeController@update');
         Route::delete('/{codigoSistema}', 'SistemaCecremgeController@destroy');
+        Route::get('/{codigoSistema}', 'SistemaCecremgeController@show');
+        
+        Route::get('/', 'SistemaCecremgeController@index');
+
+        Route::post('/', 'SistemaCecremgeController@store');
+
     });
 
     Route::group(['prefix' => 'cooperativas'], function () {
