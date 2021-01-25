@@ -164,7 +164,7 @@ class JEDIController extends Controller
         }
 
         /*
-        //Isso desativa as pessoas que não aparecem na listgem de CPF do SSIBR.
+        //Isso desativa as pessoas que não aparecem na listagem de CPF do SSIBR.
         //O problema aqui, é que quando a aessoa não acessa o SISBR por muito tempo ela fica desativada, entao
         //desativaria pessoas importantes.
         DB::table('MembrosPessoasJuridicas')

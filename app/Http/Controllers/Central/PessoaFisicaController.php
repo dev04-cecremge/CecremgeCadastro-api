@@ -86,6 +86,24 @@ class PessoaFisicaController extends Controller
         return response()->json($response);
     }
 
+    public function show($cpf){
+        $pessoaFisica = DB::table('PessoasFisicas')
+        ->where('cpf', $cpf)
+        ->select([
+            'Codigo',
+            'cpf',
+            'contadominio',
+            'nome',
+            'email',
+            'dataalteracao',
+            'editor'
+        ])
+        ->get();
+      
+        return response()->json($pessoaFisica);    
+
+    }
+
     public function supervisores()
     {
         $supervisores = DB::table('Departamentos')
@@ -196,6 +214,8 @@ class PessoaFisicaController extends Controller
             return response()->json([
                 'mensagem' => 'Pessoa física não encontrada'
             ], 401);
+
+        
 
         DB::table('MembrosPessoasJuridicas')
             ->where('CodigoPessoaFisica', $pessoaFisica->Codigo)
