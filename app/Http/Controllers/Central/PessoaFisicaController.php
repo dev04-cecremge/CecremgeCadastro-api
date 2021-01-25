@@ -206,6 +206,7 @@ class PessoaFisicaController extends Controller
 
     public function atualizarDepartamento(Request $request, $cpf)
     {
+        
         $pessoaFisica = DB::table('PessoasFisicas')
             ->where('CPF', $cpf)
             ->first();
@@ -215,8 +216,25 @@ class PessoaFisicaController extends Controller
                 'mensagem' => 'Pessoa física não encontrada'
             ], 401);
 
-        
+        //Essa pessoa é membra de alguma Cooperativa?
+        $membroPessoaJuridica = DB::table('MembrosPessoasJuridicas')
+            ->where('codigopessoafisica', $pessoaFisica->Codigo)
+            ->where('codigotipopessoafisica', '!=', 4)
+            ->get();
 
+        //0 cooperativas
+        if ( count($membroPessoaJuridica) ==0 ){
+            return response()->json([
+                'mensagem' => 'Pessoa física não tem vinculo com nenhuma cooperativa ativa'
+            ], 401);
+        }
+
+        //Mais de uma, o que deve ser um ERRO!
+        //Por enquanto irá funcionar, mas qunado utilizar em mais de uma cooperativa, TEM QUE VER COMO SERA
+        //FEITO!
+        
+        //Atualiza quando já existe a linha membropessoajuridica
+        //Atualiza para cooperativa CECREMGE!
         DB::table('MembrosPessoasJuridicas')
             ->where('CodigoPessoaFisica', $pessoaFisica->Codigo)
             ->where('CodigoPessoaJuridica', 1)
@@ -225,6 +243,9 @@ class PessoaFisicaController extends Controller
                 'DataAlteracao' => Carbon::now()->toDateTimeString(),
                 'Editor' => 'mateusl2003_00',
             ]);
+            
+        //Pessoa não está ligada a nenhuma cooperativa, 
+
 
         return response()->json([
             'mensagem' => 'Departamento atualizado'
