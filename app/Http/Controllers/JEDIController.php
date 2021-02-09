@@ -10,17 +10,18 @@ use Illuminate\Support\Facades\DB;
 
 class JEDIController extends Controller
 {
+
     public function atualizarFuncionariosCooperativa(Request $request)
     {
         
         if (!$request->planilha)
             return response()->json([
-                'Erro' => 'Planilha não foi informada'
+                'Mensagem' => 'Planilha não foi informada'
             ], 401);
 
         $excel = Importer::make('Excel');
         $excel->load($request->planilha);
-
+        
         $planilha = $excel->getCollection();
 
         // Agencia da planilha diferente do URL
@@ -31,19 +32,28 @@ class JEDIController extends Controller
             if ($linha[1] != 'Instituição:') $num++;
             else break;
         }
-
-        //PEgo a agencia
+        
+        //Pego a agencia
         $agencia =  trim($planilha[$num][9]);
-
+        
         // Agencia diferente da agencia do documento
         $linha = 1;
 
         // Resolvendo a cooperativa
         $cooperativa = [];
 
+        // Pego o numero de dias dinâmico da configuração:
+        $configuracaoAtual = DB::table('RPAConfiguracao')
+            ->where('DataIni', '<=', now()) 
+            ->where(function($query){
+                $query->where('DataFim', '>=', now())
+                ->orWhere('DataFim', NULL);
+            })
+            ->first();
+
         // Agencia 2003 - Excecao para Central
         $CodigoPessoaJuridica = 1;
-        if ($agencia === '2003') {
+        if ($agencia == '2003') {
             //---------------------------------------------------------------------------------------------
             $cooperativa = [
                 'CodigoPessoaJuridica' => 1,
@@ -57,11 +67,23 @@ class JEDIController extends Controller
             ->where('Agencia', $agencia)
             ->first();
 
-            if (!$agenciaCooperativaValida)
+            if (!$agenciaCooperativaValida){
+                //Atualizar DB - Agencia Nao existe!
+                DB::table('RPAHistorico')->insert(
+                    [
+                        'Agencia' => $agencia,
+                        'Data' => now(),
+                        'CodigoRPATiposStatus' => 5
+                    ]    
+                );
+    
+                //Retorna erro
                 return response()->json([
-                    'Erro' => 'Essa Cooperativa não existe no cadastro!'
-                ], 401);
+                    'Mensagem' => 'Cooperativa - '.$agencia.' - não existe no cadastro!'
+                ], 201);
 
+            }
+                
             $cooperativa = DB::table('Cooperativas')
                 ->where('Agencia', $agencia)
                 ->select('CodigoPessoaJuridica', 'Agencia', 'Sigla AS Nome')
@@ -70,9 +92,52 @@ class JEDIController extends Controller
             $CodigoPessoaJuridica = $cooperativa->CodigoPessoaJuridica;
         }   
 
+        // Checar se essa Cooperativa está  'Barrada' na data de hoje
+        $cooperativaBarrada = DB::table('RPAListaExcecao')
+            ->where('Agencia', $agencia)
+            ->where('DataInicio', '<=', now())
+            ->where(function($query){
+                $query->where('DataFim', '>=', now())
+                ->orWhere('DataFim', NULL);
+            })
+            ->first();
+        
+        //Checar se cooperativa esta barrada hoje
+        if ($cooperativaBarrada){
+            //Atualiza DB com "Barrada"
+            DB::Table('RPAHistorico')->insert(
+                [
+                    'Agencia' => $agencia,
+                    'Data' => now(),
+                    'CodigoRPATiposStatus' => 2
+                ]    
+            );
+
+            return response()->json([
+                'Mensagem' => 'Cooperativa - '.$agencia.' - Está barrada quanto a atualizações na data de hoje'
+            ],200);
+
+        }
+
+        //Checar se cooperativa já foi atualizada nos últimos 7 dias
+        $cooperativaAtualizadaNaUltimaSemana = DB::table('RPAHistorico')
+            ->where('Agencia', $agencia)
+            ->where('Data', '>=', now()->subDays($configuracaoAtual->DiasParaReinicioDasAtualizacoes + 1))
+            ->where('CodigoRPATiposStatus', 1)
+            ->first();
+
+        //Checar se a cooperativa foi atualizada na ultima semana
+        if ($cooperativaAtualizadaNaUltimaSemana){
+            //Retorna sucesso
+            return response()->json([
+                'Mensagem' => 'Cooperativa - '.$agencia.' - já foi atualizada nos ultimos '.$configuracaoAtual->DiasParaReinicioDasAtualizacoes.' dias!'
+            ], 200);
+        }
+
         // Pegar informações das pessoas na planilha
         $cpfs = [];
         $pessoasFisicas = [];
+        $CPFUnicos = [];
 
         $primeiraLinha = 1;
         foreach ($planilha as $linha) {
@@ -89,68 +154,111 @@ class JEDIController extends Controller
             }
         }
 
+        //---------Agrupar e pegar somente CPFS Válidos
+        //1 - Criar grupo de CPFS unicos:
+        $CPFUnicos = array_unique($cpfs);
+        //2 - Andar por ese grupo para filtrar somente os campos necessários
+        $pessoasFisicasNecessarias = [];
+        $ativo = false;
+        $exemploFalso = "";
+        foreach($CPFUnicos as $cpf){
+            //Pego todas as pessoas com ese cpf e dou preferencia se existir uma com status ativo:
+            foreach($pessoasFisicas as $pessoa){
+                if ($pessoa[0] == $cpf and $pessoa[4] == 'Ativo'){
+                    array_push($pessoasFisicasNecessarias, $pessoa);
+                    $ativo = true;
+                    break;
+                }else if ($pessoa[0] == $cpf and $pessoa[4] != 'Ativo'){ 
+                    //Pego qualquer um, pois ela só vai ser desativada!
+                    $exemploFalso = $pessoa;
+                }
+            }
+            //Ver se tem apenas nao ativos:
+            if (!$ativo){
+                array_push($pessoasFisicasNecessarias, $exemploFalso);
+            }
+
+            $ativo = false;
+        }
+
         // Atualizar ou adicionar
-        foreach ($pessoasFisicas as $item) {
+        foreach ($pessoasFisicasNecessarias as $item) {
 
             $pessoa = DB::table('PessoasFisicas')
                 ->where('CPF', $item[0])
                 ->first();
 
-            // Adicionar nova pessoa e membroPessoaFisica
-            if (!$pessoa) {
-                // Pessoasfisicas
-                $idPessoaFisica = DB::table('PessoasFisicas')
-                    ->insertGetId([
-                        'CPF' => $item[0],
-                        'ContaDominio' => strtolower($item[1]),
-                        'Nome' => $item[2],
-                        'Email' => $item[3],
-                        'DataCriacao' => Carbon::now()->toDateTimeString(),
-                        'Criador' => 'RPA'
-                    ]);
-            } else {
-                //Atualize o pessoafisica
-                DB::table('PessoasFisicas')
-                    ->where('CPF', $pessoa->CPF)
-                    ->update([
-                        'Nome' => $item[2],
-                        'EMail' => $item[3] === "" ? $pessoa->EMail : $item[3],
-                        'ContaDominio' => strtolower($item[1]),
-                        'DataAlteracao' => Carbon::now()->toDateTimeString(),
-                        'Editor' => 'RPA'
-                    ]);
-            }
-
-            // ---MembroPessoaJuridica
-            //---------------------------------------------------------------------------------------------
-            $pessoaJuridica = DB::table('MembrosPessoasJuridicas')
-                ->where('CodigoPessoaFisica', $pessoa ? $pessoa->Codigo : $idPessoaFisica)
-                ->where('CodigoPessoaJuridica', $CodigoPessoaJuridica)
-                ->first();
-
-            //----------------------------
             //Atualizo de acordo com o status da planilha. Diferente de ativo, será desabilitado
             $novoStatus = 1;
             //Basta comentar esse IF, para que nao desabilite as pessoas!
             if ( $item[4] != 'Ativo' ){
                 $novoStatus = 4;
             }
+            
+            $idPessoaFisica = '';
+            // Adicionar nova pessoa e membroPessoaFisica
+            if (!$pessoa) {
+                
+                //Adiciono SOMENTE se estiver ATIVA! 
+                //Pra que adicionar alguem que está inativo em uma cooperativa se ele nao sera colocado na MPJ?
+                if ($novoStatus == 1){
+                    // Pessoasfisicas
+                    $idPessoaFisica = DB::table('PessoasFisicas')
+                        ->insertGetId([
+                            'CPF' => $item[0],
+                            'ContaDominio' => strtolower($item[1]),
+                            'Nome' => ucfirst($item[2]),
+                            'Email' => $item[3],
+                            'DataCriacao' => Carbon::now()->toDateTimeString(),
+                            'Criador' => 'RPA'
+                        ]);
+                }
+            } else {
 
+                //Existe pessoa física cadastrada, mas só atualizo os dados se ela estiver "ATIVA"
+                //Se eu modificar esses dados para as desativas, isso vai gerar contas de domínio erradas.
+                if ($novoStatus == 1){
+                    //Atualize o pessoafisica
+                    DB::table('PessoasFisicas')
+                        ->where('CPF', $pessoa->CPF)
+                        ->update([
+                            'ContaDominio' => strtolower($item[1]),
+                            'DataAlteracao' => Carbon::now()->toDateTimeString(),
+                            'Editor' => 'RPA'
+                        ]);
+                }
+
+            }
+
+            // ---MembroPessoaJuridica
+            //---------------------------------------------------------------------------------------------
+            //Se a pessoa nao existe, eu nao tem nada a se fazer na conta de dominio!
+            if (!$pessoa and !$idPessoaFisica) 
+                continue;
+
+            $pessoaJuridica = DB::table('MembrosPessoasJuridicas')
+                ->where('CodigoPessoaFisica', $pessoa? $pessoa->Codigo : $idPessoaFisica)
+                ->where('CodigoPessoaJuridica', $CodigoPessoaJuridica)
+                ->first();
+            //----------------------------
+            
             //Inserir Pessoa Juridica
             if (!$pessoaJuridica) {
-                //Inserir nova pessoa Juridica
+                //Inserir nova pessoa Juridica APENAS se for ATIVA, inativa não será inserida!
+                if ($novoStatus == 1){
                     DB::table('MembrosPessoasJuridicas')
                     ->insertGetId([
                         'DataCriacao' => Carbon::now()->toDateTimeString(),
                         'Criador' => 'RPA',
-                        'CodigoPessoaFisica' => $pessoa ? $pessoa->Codigo : $idPessoaFisica,
+                        'CodigoPessoaFisica' => $pessoa? $pessoa->Codigo: $idPessoaFisica,
                         'CodigoTipoPessoaFisica' => $novoStatus,
                         'CodigoPessoaJuridica' => $CodigoPessoaJuridica
                     ]);
+                }
 
             } else {
 
-                //Atualizar se o status estiver desabilitado
+                //Atualizar o tipo para desabilitado se o status estiver diferente de "ativo" no SISBR
                 DB::table('MembrosPessoasJuridicas')
                     ->where('CodigoPessoaFisica', $pessoa ? $pessoa->Codigo : $idPessoaFisica)
                     ->where('CodigoPessoaJuridica', $CodigoPessoaJuridica)
@@ -159,13 +267,14 @@ class JEDIController extends Controller
                         'Editor' => 'RPA',
                         'CodigoTipoPessoaFisica' => $novoStatus
                     ]);
-
             }
         }
 
+
+
         /*
-        //Isso desativa as pessoas que não aparecem na listagem de CPF do SSIBR.
-        //O problema aqui, é que quando a aessoa não acessa o SISBR por muito tempo ela fica desativada, entao
+        //Isso desativa as pessoas que não aparecem na listagem de CPF do SISBR.
+        //O problema aqui, é que quando a pessoa não acessa o SISBR por muito tempo ela fica desativada, entao
         //desativaria pessoas importantes.
         DB::table('MembrosPessoasJuridicas')
             ->join('PessoasFisicas', 'PessoasFisicas.Codigo', '=', 'MembrosPessoasJuridicas.CodigoPessoaFisica')
@@ -179,12 +288,22 @@ class JEDIController extends Controller
             ]);
         */
 
-        //Desativar as diferenças entre Cadastro e Planilha
+        //Inserir no banco, com ostauts OK:
+        DB::Table('RPAHistorico')->insert(
+            [
+                'Agencia' => $agencia,
+                'Data' => now(),
+                'CodigoRPATiposStatus' => 1
+            ]    
+        );
+
         return response()->json([
-            'Mensagem' => 'Ok'
-        ]);
+            'Mensagem!' => 'Cooperativa - '.$agencia.' - Atualizada!'
+        ], 200);
+        
+
     }
 
-    
+
 
 }

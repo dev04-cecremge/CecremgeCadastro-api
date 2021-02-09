@@ -66,5 +66,50 @@ Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => '
         Route::delete('/{codigoCooperativa}', 'CooperativaController@destroy');
     });
 
-    //
 });
+
+
+Route::group(['prefix' => 'RPA', 'namespace' => 'RPA', 'middleware' => 'jwt.auth'], function () {
+
+    Route::group(['prefix' => 'historicos'], function (){
+        Route::get('/', 'RPAController@indexHistoricos');
+        Route::post('/', 'RPAController@storeHistoricos');
+        Route::get('/{codigoHistorico}', 'RPAController@showHistoricos');
+        Route::put('/{codigoHistorico}', 'RPAController@updateHistoricos');
+        Route::delete('/{codigoHistorico}', 'RPAController@destroyHistoricos');
+    });
+
+    Route::group(['prefix' => 'excecoes'], function (){
+        Route::get('/', 'RPAController@indexExcecoes');
+        Route::get('/{codigoExcecao}', 'RPAController@showExcecoes');
+
+        Route::post('/', 'RPAController@storeExcecoes'); //Cria nova cnfgiuração de exclusão
+        
+        Route::put('/{codigoExcecao}', 'RPAController@updateExcecoes');
+        Route::delete('/{codigoExcecao}', 'RPAController@destroyExcecoes');
+    
+    });
+
+    Route::group(['prefix' => 'status'], function (){
+        Route::get('/', 'RPAController@indexStatus');
+    });
+
+    Route::group(['prefix' => 'configuracoes'], function (){
+        Route::get('/', 'RPAController@indexConfiguracoes');
+        Route::get('/{codigoConfiguracao}', 'RPAController@showConfiguracoes');
+
+        Route::post('/', 'RPAController@storeConfiguracoes'); //Cria nova cnfgiuração de exclusão
+        
+        Route::put('/{codigoConfiguracao}', 'RPAController@updateConfiguracoes');
+        Route::delete('/{codigoConfiguracao}', 'RPAController@destroyConfiguracoes');
+
+
+
+
+
+    });
+
+});
+
+
+
