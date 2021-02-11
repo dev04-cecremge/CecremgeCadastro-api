@@ -13,6 +13,11 @@ Route::group(['prefix' => 'jedi'], function () {
     Route::post('/cooperativas/atualizar-funcionarios', 'JEDIController@atualizarFuncionariosCooperativa');
     //isere as barradas e atualizadas e retorna lista valida a partir de lista de cooperatiras JSON
     Route::post('/cooperativas/tratarListaCooperativas', 'JEDIController@tratarListaCooperativas'); 
+
+    Route::post('/cooperativas/inserirInexistente/{agencia}', 'JEDIController@inserirInexistente'); 
+    Route::post('/cooperativas/inserirErroSISBR/{agencia}', 'JEDIController@inserirErroSISBR'); 
+    Route::post('/cooperativas/inserirInativa/{agencia}', 'JEDIController@inserirInativa'); 
+
 });
 
 Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => 'jwt.auth'], function () {

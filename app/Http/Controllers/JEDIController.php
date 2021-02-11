@@ -387,4 +387,43 @@ class JEDIController extends Controller
         ]);
     }
 
+    public function inserirInativa($agencia){
+        DB::table('RPAHistorico')
+            ->insert([
+                'Agencia' => $agencia,
+                'Data' => now(),
+                'CodigoRPATiposStatus' => 3
+            ]);
+        
+        return response()->json([
+            'Mensagem' => 'Sucesso. Angencia '.$agencia.' foi inserida como inativa'
+        ]);
+    }
+
+    public function inserirErroSISBR($agencia){
+        DB::table('RPAHistorico')
+            ->insert([
+                'Agencia' => $agencia,
+                'Data' => now(),
+                'CodigoRPATiposStatus' => 4
+            ]);
+        
+        return response()->json([
+            'Mensagem' => 'Sucesso. Angencia '.$agencia.' foi inserida como ERROSISBR'
+        ]);
+    }
+
+    public function inserirInexistente($agencia){
+        DB::table('RPAHistorico')
+            ->insert([
+                'Agencia' => $agencia,
+                'Data' => now(),
+                'CodigoRPATiposStatus' => 5
+            ]);
+        
+        return response()->json([
+            'Mensagem' => 'Sucesso. Angencia '.$agencia.' foi inserida como Inexistente'
+        ]);
+    }
+
 }
