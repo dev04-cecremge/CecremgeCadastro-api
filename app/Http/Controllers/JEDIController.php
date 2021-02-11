@@ -345,6 +345,13 @@ class JEDIController extends Controller
         }
         //Todas Agencias que nao devem atualizar:
 
+        //todas cooperativas do sistema, para encontrar cooperativas invalidas:
+        $todas = DB::table('cooperativas')->get();
+        $listaTodas = [];
+        foreach($todas as $item){
+            array_push($listaTodas, $item->Agencia);
+        }
+
         //Agencias barradas via Excecao
         $viaExcecao = DB::table('RPAListaExcecao')
             ->where('DataInicio', '<=', now())
@@ -375,8 +382,20 @@ class JEDIController extends Controller
 
             }else{
                 if ( in_array($item, $listaNaoAtualizar) == false ){
-                    //Nao foi barrada, nem atualizada nos ultimos X dias, então essa é uma ocoperativa válida!
-                    array_push($listaDeretorno, $item);
+                    //Nao foi barrada, nem atualizada nos ultimos X dias!
+                    //Mas é uma coopertiva valida?
+                    if (in_array($item, $listaTodas) ==false ){
+                        //Agencia invalida!
+                            DB::table('RPAHistorico')
+                            ->insert([
+                                'Agencia' => $item,
+                                'Data' => now(),
+                                'CodigoRPATiposStatus' => 5
+                            ]);
+                    }else{
+                        //Agencia valida!
+                        array_push($listaDeretorno, $item);
+                    }
                 }
             }
 
@@ -413,17 +432,5 @@ class JEDIController extends Controller
         ]);
     }
 
-    public function inserirInexistente($agencia){
-        DB::table('RPAHistorico')
-            ->insert([
-                'Agencia' => $agencia,
-                'Data' => now(),
-                'CodigoRPATiposStatus' => 5
-            ]);
-        
-        return response()->json([
-            'Mensagem' => 'Sucesso. Angencia '.$agencia.' foi inserida como Inexistente'
-        ]);
-    }
 
 }
