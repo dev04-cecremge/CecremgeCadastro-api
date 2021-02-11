@@ -13,7 +13,6 @@ class JEDIController extends Controller
 
     public function atualizarFuncionariosCooperativa(Request $request)
     {
-        
         if (!$request->planilha)
             return response()->json([
                 'Mensagem' => 'Planilha não foi informada'
@@ -126,6 +125,7 @@ class JEDIController extends Controller
             ->where('CodigoRPATiposStatus', 1)
             ->first();
 
+
         //Checar se a cooperativa foi atualizada na ultima semana
         if ($cooperativaAtualizadaNaUltimaSemana){
             //Retorna sucesso
@@ -133,7 +133,7 @@ class JEDIController extends Controller
                 'Mensagem' => 'Cooperativa - '.$agencia.' - já foi atualizada nos ultimos '.$configuracaoAtual->DiasParaReinicioDasAtualizacoes.' dias!'
             ], 200);
         }
-
+        
         // Pegar informações das pessoas na planilha
         $cpfs = [];
         $pessoasFisicas = [];
@@ -180,7 +180,7 @@ class JEDIController extends Controller
 
             $ativo = false;
         }
-
+        
         // Atualizar ou adicionar
         foreach ($pessoasFisicasNecessarias as $item) {
 
@@ -207,7 +207,7 @@ class JEDIController extends Controller
                         ->insertGetId([
                             'CPF' => $item[0],
                             'ContaDominio' => strtolower($item[1]),
-                            'Nome' => ucfirst($item[2]),
+                            'Nome' => trim(ucwords(mb_strtolower($item[2]))),
                             'Email' => $item[3],
                             'DataCriacao' => Carbon::now()->toDateTimeString(),
                             'Criador' => 'RPA'
@@ -219,13 +219,16 @@ class JEDIController extends Controller
                 //Se eu modificar esses dados para as desativas, isso vai gerar contas de domínio erradas.
                 if ($novoStatus == 1){
                     //Atualize o pessoafisica
-                    DB::table('PessoasFisicas')
-                        ->where('CPF', $pessoa->CPF)
-                        ->update([
-                            'ContaDominio' => strtolower($item[1]),
-                            'DataAlteracao' => Carbon::now()->toDateTimeString(),
-                            'Editor' => 'RPA'
-                        ]);
+                    //Atualize quando a conta de dominio for diferente
+                    if ( $pessoa->ContaDominio != strtolower($item[1]) ){
+                        DB::table('PessoasFisicas')
+                            ->where('CPF', $pessoa->CPF)
+                            ->update([
+                                'ContaDominio' => strtolower($item[1]),
+                                'DataAlteracao' => Carbon::now()->toDateTimeString(),
+                                'Editor' => 'RPA'
+                            ]);
+                    }
                 }
 
             }
@@ -258,19 +261,24 @@ class JEDIController extends Controller
 
             } else {
 
-                //Atualizar o tipo para desabilitado se o status estiver diferente de "ativo" no SISBR
-                DB::table('MembrosPessoasJuridicas')
-                    ->where('CodigoPessoaFisica', $pessoa ? $pessoa->Codigo : $idPessoaFisica)
-                    ->where('CodigoPessoaJuridica', $CodigoPessoaJuridica)
-                    ->update([
-                        'DataAlteracao' => Carbon::now()->toDateTimeString(),
-                        'Editor' => 'RPA',
-                        'CodigoTipoPessoaFisica' => $novoStatus
-                    ]);
+                //Atualizar membroPessoaJuridica SOMENTE se o status anteriro do cadastro for 1 ou 4, para não 
+                //afetar conselheiros, presidentes...
+                if (
+                    ($pessoaJuridica->CodigoTipoPessoaFisica == 1 or  $pessoaJuridica->CodigoTipoPessoaFisica == 4)
+                    and $pessoaJuridica->CodigoTipoPessoaFisica != $novoStatus
+                    )
+                    {
+                    DB::table('MembrosPessoasJuridicas')
+                        ->where('CodigoPessoaFisica', $pessoa ? $pessoa->Codigo : $idPessoaFisica)
+                        ->where('CodigoPessoaJuridica', $CodigoPessoaJuridica)
+                        ->update([
+                            'DataAlteracao' => Carbon::now()->toDateTimeString(),
+                            'Editor' => 'RPA',
+                            'CodigoTipoPessoaFisica' => $novoStatus
+                        ]);
+                }
             }
         }
-
-
 
         /*
         //Isso desativa as pessoas que não aparecem na listagem de CPF do SISBR.
@@ -304,6 +312,79 @@ class JEDIController extends Controller
 
     }
 
+    public function tratarListaCooperativas(Request $request){
 
+        //Ver se todas coopertivas estão validas
+        $listaCooperativas = $request->cooperativas;
+
+        if (!$listaCooperativas){
+            return response()->json([
+                'Mensagem' => 'Erro. A lista: cooperativas não foi encontrada. '
+            ]);
+        }
+
+        //dias de não re-atualização dinâmica
+        $diasParareset = DB::table('RPAConfiguracao')
+            ->where('DataIni', '<=', now()) 
+            ->where(function($query){
+                $query->where('DataFim', '>=', now())
+                ->orWhere('DataFim', NULL);
+            })
+            ->first();
+
+
+        //Todas Agencias que nao devem atualizar:
+        $naoAtualizar = DB::table('RPAHistorico')
+            ->where('Data', '>=', now()->subDays($diasParareset->DiasParaReinicioDasAtualizacoes + 1))
+            ->where('CodigoRPATiposStatus', 1)
+            ->get();
+        $listaNaoAtualizar = [];
+
+        foreach($naoAtualizar as $item){
+            array_push($listaNaoAtualizar, $item->Agencia);
+        }
+        //Todas Agencias que nao devem atualizar:
+
+        //Agencias barradas via Excecao
+        $viaExcecao = DB::table('RPAListaExcecao')
+            ->where('DataInicio', '<=', now())
+            ->where(function($query){
+                $query->where('DataFim', '>=', now())
+                ->orWhere('DataFim', NULL);
+            })
+            ->get();
+
+        $listaExcecao = [];
+        foreach($viaExcecao as $item){
+            array_push($listaExcecao, $item->Agencia);
+        }
+
+        $listaDeretorno = [];
+        //Lista de agencias ja realizadas atualizacoes na data X
+        foreach($listaCooperativas as $item){
+            
+            //Aparece nas barradas?
+            if ( in_array($item, $listaExcecao) ){
+                //Inserir no historico, como erro por ser barrada
+                DB::table('RPAHistorico')
+                    ->insert([
+                        'Agencia' => $item,
+                        'Data' => now(),
+                        'CodigoRPATiposStatus' => 2
+                    ]);
+
+            }else{
+                if ( in_array($item, $listaNaoAtualizar) == false ){
+                    //Nao foi barrada, nem atualizada nos ultimos X dias, então essa é uma ocoperativa válida!
+                    array_push($listaDeretorno, $item);
+                }
+            }
+
+        }
+
+        return response()->json([
+            'cooperativas' => $listaDeretorno
+        ]);
+    }
 
 }

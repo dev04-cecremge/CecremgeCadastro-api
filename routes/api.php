@@ -11,6 +11,8 @@ Route::group(['prefix' => 'sessions'], function () {
 
 Route::group(['prefix' => 'jedi'], function () {
     Route::post('/cooperativas/atualizar-funcionarios', 'JEDIController@atualizarFuncionariosCooperativa');
+    //isere as barradas e atualizadas e retorna lista valida a partir de lista de cooperatiras JSON
+    Route::post('/cooperativas/tratarListaCooperativas', 'JEDIController@tratarListaCooperativas'); 
 });
 
 Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => 'jwt.auth'], function () {
