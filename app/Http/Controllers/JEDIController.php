@@ -366,6 +366,17 @@ class JEDIController extends Controller
             array_push($listaExcecao, $item->Agencia);
         }
 
+        //Lista todos ja pegos nohsitorico hoje
+        $listaDeHojeHistorico = DB::table('RPAHistorico')
+            ->where('Data', '>=', now()->format('Y-m-d'))
+            ->whereIn('CodigoRPATiposStatus', ([2,3,5]))
+            ->get();
+        $listaDeJaInclusosNohistorico = [];
+        foreach($listaDeHojeHistorico as $item){
+            array_push($listaDeJaInclusosNohistorico , $item->Agencia);
+        }
+        
+
         $listaDeretorno = [];
         //Lista de agencias ja realizadas atualizacoes na data X
         foreach($listaCooperativas as $item){
@@ -373,25 +384,33 @@ class JEDIController extends Controller
             //Aparece nas barradas?
             if ( in_array($item, $listaExcecao) ){
                 //Inserir no historico, como erro por ser barrada
-                DB::table('RPAHistorico')
-                    ->insert([
-                        'Agencia' => $item,
-                        'Data' => now(),
-                        'CodigoRPATiposStatus' => 2
-                    ]);
+                //Insiro apenas se nao existir um log dessa mesma cooperativa hoje:
+                if (in_array($item, $listaDeJaInclusosNohistorico) == false){
+
+                    DB::table('RPAHistorico')
+                        ->insert([
+                            'Agencia' => $item,
+                            'Data' => now(),
+                            'CodigoRPATiposStatus' => 2
+                        ]);
+                }
 
             }else{
                 if ( in_array($item, $listaNaoAtualizar) == false ){
                     //Nao foi barrada, nem atualizada nos ultimos X dias!
+
                     //Mas é uma coopertiva valida?
                     if (in_array($item, $listaTodas) ==false ){
                         //Agencia invalida!
+                        //Insira somente, se nao aparecer um log dela hoje!
+                        if (in_array($item, $listaDeJaInclusosNohistorico) == false){
                             DB::table('RPAHistorico')
                             ->insert([
                                 'Agencia' => $item,
                                 'Data' => now(),
                                 'CodigoRPATiposStatus' => 5
                             ]);
+                        }
                     }else{
                         //Agencia valida!
                         array_push($listaDeretorno, $item);
