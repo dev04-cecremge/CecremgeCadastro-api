@@ -221,7 +221,7 @@ class RPAController extends Controller{
                 'Mensagem' => 'Erro. Configuração não existe.'
             ]);
         
-        if ( !$request->Nome or !$request->DataInicio or !$request->DiasParaReinicioDasAtualizacoes)
+        if ( !$request->Nome or !$request->DataIni or !$request->DiasParaReinicioDasAtualizacoes)
             return response()->json(['Mensagem' => 'Nao existem parâmetros a serem atualizados, favor criar Json com parâmetros']);
 
         //Atualizo

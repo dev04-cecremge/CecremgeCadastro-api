@@ -49,7 +49,7 @@ class JEDIController extends Controller
                 ->orWhere('DataFim', NULL);
             })
             ->first();
-
+        
         // Agencia 2003 - Excecao para Central
         $CodigoPessoaJuridica = 1;
         if ($agencia == '2003') {
@@ -331,7 +331,6 @@ class JEDIController extends Controller
                 ->orWhere('DataFim', NULL);
             })
             ->first();
-
 
         //Todas Agencias que nao devem atualizar:
         $naoAtualizar = DB::table('RPAHistorico')
