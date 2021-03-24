@@ -34,7 +34,9 @@ class RPAController extends Controller{
         ->get();
         return response()->json( $allHistorico );
     }
-
+    public function indexHistoricosDaData($data){
+        return response()->response('Não implementado');
+    }
     
 
     public function showHistoricos($codigoHistorico){

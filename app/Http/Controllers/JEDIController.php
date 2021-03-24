@@ -16,7 +16,7 @@ class JEDIController extends Controller
         if (!$request->planilha)
             return response()->json([
                 'Mensagem' => 'Planilha não foi informada'
-            ], 401);
+            ], 400);
 
         $excel = Importer::make('Excel');
         $excel->load($request->planilha);
@@ -79,7 +79,7 @@ class JEDIController extends Controller
                 //Retorna erro
                 return response()->json([
                     'Mensagem' => 'Cooperativa - '.$agencia.' - não existe no cadastro!'
-                ], 201);
+                ], 400);
 
             }
                 
@@ -203,12 +203,18 @@ class JEDIController extends Controller
                 //Pra que adicionar alguem que está inativo em uma cooperativa se ele nao sera colocado na MPJ?
                 if ($novoStatus == 1){
                     // Pessoasfisicas
+                    //NACIONALIDADE: BRASILEIRA
+                    //NATURAL DE: Belo Horizonte
+                    //endereço: NAO CADASTRADO
                     $idPessoaFisica = DB::table('PessoasFisicas')
                         ->insertGetId([
                             'CPF' => $item[0],
                             'ContaDominio' => strtolower($item[1]),
                             'Nome' => trim(ucwords(mb_strtolower($item[2]))),
                             'Email' => $item[3],
+                            'Nacionalidade' => 'BRASILEIRA',
+                            'codigonaturalidade' => 585,
+                            'codigoendereco' => 2685,
                             'DataCriacao' => Carbon::now()->toDateTimeString(),
                             'Criador' => 'RPA'
                         ]);
@@ -312,6 +318,51 @@ class JEDIController extends Controller
 
     }
 
+
+    public function gerarListaCadastro(Request $request){
+        
+        if (!$request->planilha)
+            return response()->json([
+                'Mensagem' => 'Planilha não foi informada'
+            ], 400);
+
+        
+        $excel = Importer::make('Excel');
+        $excel->load($request->planilha);
+        
+        $planilha = $excel->getCollection();
+
+        $primeiraLinha = 1;
+        foreach ($planilha as $linha) {
+            if ($linha[0] !== 'CPF') $primeiraLinha++;
+            else break;
+        }
+
+        $retorno = "nome,usuario,situacao"."\r\n";
+
+        
+        for ($i = $primeiraLinha; $i <= sizeof($planilha) - 1; $i++) {
+
+            //Se tiver CPF na primeira coluna do excel
+            if (!empty($planilha[$i][0])) {
+
+                //Pega a linha
+                $linha = array($planilha[$i][6], $planilha[$i][12], $planilha[$i][13], $planilha[$i][21]);
+
+                //salva na lista de fim
+                $retorno = $retorno.''.$planilha[$i][12].','.$planilha[$i][6].','.$planilha[$i][21]."\r\n";
+
+            }
+        }
+        
+
+        
+
+        //Retorna o arquivo
+        return response($retorno);
+
+    }
+
     public function tratarListaCooperativas(Request $request){
 
         //Ver se todas coopertivas estão validas
@@ -334,7 +385,7 @@ class JEDIController extends Controller
 
         //Todas Agencias que nao devem atualizar:
         $naoAtualizar = DB::table('RPAHistorico')
-            ->where('Data', '>=', now()->subDays($diasParareset->DiasParaReinicioDasAtualizacoes + 1))
+            ->where('Data', '>=', now()->subDays($diasParareset->DiasParaReinicioDasAtualizacoes))
             ->where('CodigoRPATiposStatus', 1)
             ->get();
         $listaNaoAtualizar = [];
@@ -365,7 +416,7 @@ class JEDIController extends Controller
             array_push($listaExcecao, $item->Agencia);
         }
 
-        //Lista todos ja pegos nohsitorico hoje
+        //Lista todos ja pegos no hsitorico hoje
         $listaDeHojeHistorico = DB::table('RPAHistorico')
             ->where('Data', '>=', now()->format('Y-m-d'))
             ->whereIn('CodigoRPATiposStatus', ([2,3,5]))
@@ -374,7 +425,6 @@ class JEDIController extends Controller
         foreach($listaDeHojeHistorico as $item){
             array_push($listaDeJaInclusosNohistorico , $item->Agencia);
         }
-        
 
         $listaDeretorno = [];
         //Lista de agencias ja realizadas atualizacoes na data X
@@ -395,6 +445,7 @@ class JEDIController extends Controller
                 }
 
             }else{
+                //Não aparece nas barradas
                 if ( in_array($item, $listaNaoAtualizar) == false ){
                     //Nao foi barrada, nem atualizada nos ultimos X dias!
 

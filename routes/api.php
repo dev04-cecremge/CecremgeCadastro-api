@@ -17,6 +17,7 @@ Route::group(['prefix' => 'jedi'], function () {
     Route::post('/cooperativas/inserirErroSISBR/{agencia}', 'JEDIController@inserirErroSISBR'); 
     Route::post('/cooperativas/inserirInativa/{agencia}', 'JEDIController@inserirInativa'); 
 
+    Route::post('/cooperativas/gerarListaCadastro', 'JEDIController@gerarListaCadastro');
 });
 
 Route::group(['prefix' => 'central', 'namespace' => 'Central', 'middleware' => 'jwt.auth'], function () {
@@ -79,6 +80,8 @@ Route::group(['prefix' => 'RPA', 'namespace' => 'RPA', 'middleware' => 'jwt.auth
 
     Route::group(['prefix' => 'historicos'], function (){
         Route::get('/', 'RPAController@indexHistoricos');
+        Route::get('/{data}', 'RPAController@indexHistoricosDaData');
+
         Route::post('/', 'RPAController@storeHistoricos');
         Route::get('/{codigoHistorico}', 'RPAController@showHistoricos');
         Route::put('/{codigoHistorico}', 'RPAController@updateHistoricos');
